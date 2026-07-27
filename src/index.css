@@ -358,7 +358,7 @@ input {
 
 .layer-row--selected,
 .layer-row--selected:hover {
-  background: var(--accent-soft);
+  background: var(--row-tint, var(--accent-soft));
 }
 
 .layer-row--hidden .layer-row__name,
@@ -381,14 +381,14 @@ input {
   font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--row-accent, var(--accent));
   border-radius: 3px;
   flex-shrink: 0;
   padding: 1px 0;
 }
 
 .layer-row--selected .index {
-  background: var(--accent);
+  background: var(--row-accent, var(--accent));
   color: #fff;
 }
 

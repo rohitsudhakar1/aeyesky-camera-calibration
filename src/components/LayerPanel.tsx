@@ -103,6 +103,14 @@ export function LayerPanel() {
                       selected ? 'layer-row--selected' : '',
                       area.visible ? '' : 'layer-row--hidden',
                     ].join(' ')}
+                    // Selection and index badge take the label's own colour, so a
+                    // chip_tray row highlights in its blue rather than main_bet's indigo.
+                    style={
+                      {
+                        '--row-accent': label.color,
+                        '--row-tint': label.tint,
+                      } as React.CSSProperties
+                    }
                     onClick={() => {
                       select(area.id);
                       setTool('select');
