@@ -224,7 +224,7 @@ src/
 
 ## Time spent
 
-~4 hours, including verification and this README.
+~2.5 hours, including verification and this README.
 
 ## AI tools used
 
@@ -288,7 +288,7 @@ Two more worth recording:
   settles when the page lacks focus or permission. I made the in-app clipboard
   the fast path and demoted the OS clipboard to the cross-tab fallback.
 
-I also turned down two AI-suggested additions as scope creep against the design:
+I also considered and rejected two additions as scope creep against the design:
 an add-label UI and a rename-layer field. Both invent product surface the Figma
 doesn't have, and the rename in particular would have made the required unique
 identifier editable while pre-empting a taxonomy decision that isn't mine to
