@@ -56,6 +56,7 @@ export function CanvasStage() {
   const hoveredId = useStore((s) => s.hoveredId);
   const activeLabel = useStore((s) => s.activeLabel);
 
+  const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [cursor, setCursor] = useState<Point | null>(null);
@@ -63,15 +64,22 @@ export function CanvasStage() {
   const [marquee, setMarquee] = useState<{ origin: Point; current: Point } | null>(null);
   const drag = useRef<DragState>(null);
 
-  // The image is laid out with `max-width/height: 100%`, so its rendered size
-  // is only known after layout — measure it and convert coordinates in JS
-  // rather than relying on an SVG viewBox (which would also scale strokes).
+  // Fit the frame to the stage in JS rather than with `max-height: 100%`, which
+  // silently does nothing against an auto-height parent and lets the image
+  // overflow and get cropped. Measuring the stage and computing the contain-fit
+  // box explicitly also gives the exact pixel size the SVG overlay needs.
   useLayoutEffect(() => {
-    const el = frameRef.current;
+    const el = stageRef.current;
     if (!el) return;
+    const aspect = TABLE_IMAGE.width / TABLE_IMAGE.height;
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry.contentRect;
-      setSize({ width, height });
+      if (width <= 0 || height <= 0) return;
+      const fitted =
+        width / height > aspect
+          ? { width: height * aspect, height } // stage is wider — height-bound
+          : { width, height: width / aspect }; // stage is taller — width-bound
+      setSize(fitted);
     });
     observer.observe(el);
     return () => observer.disconnect();
@@ -352,8 +360,12 @@ export function CanvasStage() {
   const draftLabel = getLabel(activeLabel);
 
   return (
-    <div className="stage">
-      <div className="stage__frame" ref={frameRef}>
+    <div className="stage" ref={stageRef}>
+      <div
+        className="stage__frame"
+        ref={frameRef}
+        style={{ width: size.width, height: size.height }}
+      >
         <img className="stage__image" src={TABLE_IMAGE.source} alt="Table camera frame" draggable={false} />
 
         <svg
