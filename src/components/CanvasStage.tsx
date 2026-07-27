@@ -23,14 +23,35 @@ const capturePointer = (e: React.PointerEvent<SVGSVGElement>) => {
 
 type DragState =
   | { kind: 'vertex'; areaId: string; index: number }
-  | { kind: 'move'; areaId: string; last: Point; moved: boolean }
+  | { kind: 'move'; last: Point; moved: boolean }
+  | { kind: 'marquee'; origin: Point; additive: boolean }
   | null;
+
+/** Normalised rect between two corners, in either drag direction. */
+const rectBetween = (a: Point, b: Point) => ({
+  x: Math.min(a.x, b.x),
+  y: Math.min(a.y, b.y),
+  width: Math.abs(a.x - b.x),
+  height: Math.abs(a.y - b.y),
+});
+
+const polygonIntersectsRect = (points: Point[], r: ReturnType<typeof rectBetween>) => {
+  const box = boundingBox(points);
+  // Bounding-box overlap is the right test here: an operator dragging a marquee
+  // expects to catch anything it touches, not only fully-enclosed regions.
+  return (
+    box.x < r.x + r.width &&
+    box.x + box.width > r.x &&
+    box.y < r.y + r.height &&
+    box.y + box.height > r.y
+  );
+};
 
 export function CanvasStage() {
   const areas = useStore((s) => s.areas);
   const tool = useStore((s) => s.tool);
   const draft = useStore((s) => s.draft);
-  const selectedId = useStore((s) => s.selectedId);
+  const selectedIds = useStore((s) => s.selectedIds);
   const editingId = useStore((s) => s.editingId);
   const hoveredId = useStore((s) => s.hoveredId);
   const activeLabel = useStore((s) => s.activeLabel);
@@ -39,6 +60,7 @@ export function CanvasStage() {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [cursor, setCursor] = useState<Point | null>(null);
   const [labelMenu, setLabelMenu] = useState<{ areaId: string; x: number; y: number } | null>(null);
+  const [marquee, setMarquee] = useState<{ origin: Point; current: Point } | null>(null);
   const drag = useRef<DragState>(null);
 
   // The image is laid out with `max-width/height: 100%`, so its rendered size
@@ -123,9 +145,22 @@ export function CanvasStage() {
       }
     }
 
-    useStore.getState().select(hit?.id ?? null);
-    if (hit) {
-      drag.current = { kind: 'move', areaId: hit.id, last: p, moved: false };
+    // Shift or Cmd/Ctrl extends the selection, matching every design tool.
+    const additive = e.shiftKey || e.metaKey || e.ctrlKey;
+
+    if (!hit) {
+      // Empty space: start a marquee rather than only clearing the selection.
+      if (!additive) useStore.getState().clearSelection();
+      drag.current = { kind: 'marquee', origin: p, additive };
+      setMarquee({ origin: p, current: p });
+      capturePointer(e);
+      return;
+    }
+
+    useStore.getState().select(hit.id, additive ? 'toggle' : 'replace');
+    // A toggle that removed the region shouldn't then drag it.
+    if (useStore.getState().selectedIds.includes(hit.id)) {
+      drag.current = { kind: 'move', last: p, moved: false };
       capturePointer(e);
     }
   };
@@ -142,15 +177,33 @@ export function CanvasStage() {
       return;
     }
 
+    if (d.kind === 'marquee') {
+      setMarquee({ origin: d.origin, current: p });
+      return;
+    }
+
     const dx = p.x - d.last.x;
     const dy = p.y - d.last.y;
     if (!d.moved && distance(toPx(p), toPx(d.last)) < DRAG_THRESHOLD) return;
     d.moved = true;
     d.last = p;
-    useStore.getState().moveArea(d.areaId, dx, dy);
+    useStore.getState().moveSelected(dx, dy);
   };
 
   const handlePointerUp = () => {
+    const d = drag.current;
+    if (d?.kind === 'marquee' && marquee) {
+      const rect = rectBetween(marquee.origin, marquee.current);
+      // Ignore an accidental micro-drag: that was a click on empty space.
+      if (rect.width * size.width > DRAG_THRESHOLD || rect.height * size.height > DRAG_THRESHOLD) {
+        const caught = visibleAreas
+          .filter((a) => polygonIntersectsRect(a.points, rect))
+          .map((a) => a.id);
+        const existing = d.additive ? useStore.getState().selectedIds : [];
+        useStore.getState().selectMany([...new Set([...existing, ...caught])]);
+      }
+    }
+    setMarquee(null);
     drag.current = null;
   };
 
@@ -181,9 +234,12 @@ export function CanvasStage() {
 
   const renderArea = (area: Area) => {
     const label = getLabel(area.label);
-    const selected = area.id === selectedId;
+    const selected = selectedIds.includes(area.id);
     const editing = area.id === editingId;
     const highlighted = selected || area.id === hoveredId;
+    // The id badge is only legible on a single selection; a multi-selection
+    // would stack badges on top of one another.
+    const showBadge = selected && selectedIds.length === 1;
     const box = boundingBox(area.points);
     const topLeft = toPx({ x: box.x, y: box.y });
     const boxSize = { w: box.width * size.width, h: box.height * size.height };
@@ -231,6 +287,7 @@ export function CanvasStage() {
             ))}
 
             {/* Id badge. Clicking it switches the region's category (design note 6). */}
+            {showBadge && (
             <g
               transform={`translate(${topLeft.x}, ${topLeft.y - 20})`}
               style={{ cursor: 'pointer' }}
@@ -249,6 +306,7 @@ export function CanvasStage() {
                 {area.id}
               </text>
             </g>
+            )}
           </>
         )}
 
@@ -361,6 +419,27 @@ export function CanvasStage() {
             </g>
           )}
 
+          {/* Marquee selection rectangle. */}
+          {marquee &&
+            (() => {
+              const r = rectBetween(marquee.origin, marquee.current);
+              const tl = toPx({ x: r.x, y: r.y });
+              return (
+                <rect
+                  x={tl.x}
+                  y={tl.y}
+                  width={r.width * size.width}
+                  height={r.height * size.height}
+                  fill="#4f46e5"
+                  fillOpacity={0.08}
+                  stroke="#4f46e5"
+                  strokeWidth={1}
+                  strokeDasharray="4 3"
+                  pointerEvents="none"
+                />
+              );
+            })()}
+
           {/* The anchor that would be placed next. */}
           {drawing && cursor && !canClose && (
             <circle
@@ -377,7 +456,13 @@ export function CanvasStage() {
         </svg>
       </div>
 
-      <StageHint drawing={drawing} draftLength={draft.length} editing={!!editingId} canClose={canClose} />
+      <StageHint
+        drawing={drawing}
+        draftLength={draft.length}
+        editing={!!editingId}
+        canClose={canClose}
+        selectedCount={selectedIds.length}
+      />
 
       {labelMenu && (
         <LabelMenu
@@ -395,16 +480,25 @@ export function CanvasStage() {
   );
 }
 
+/** Platform-appropriate name for the copy/paste modifier key. */
+const MOD = /Mac|iPhone|iPad/i.test(
+  typeof navigator === 'undefined' ? '' : navigator.userAgent,
+)
+  ? '⌘'
+  : 'Ctrl';
+
 function StageHint({
   drawing,
   draftLength,
   editing,
   canClose,
+  selectedCount,
 }: {
   drawing: boolean;
   draftLength: number;
   editing: boolean;
   canClose: boolean;
+  selectedCount: number;
 }) {
   let content: React.ReactNode = null;
 
@@ -426,6 +520,28 @@ function StageHint({
     content = (
       <>
         Drag anchors to reshape · click a dashed midpoint to add · <kbd>Alt</kbd>+click removes
+      </>
+    );
+  else if (selectedCount > 1)
+    content = (
+      <>
+        {selectedCount} selected · drag to move together · <kbd>Delete</kbd> removes all ·{' '}
+        <kbd>Esc</kbd> clears
+      </>
+    );
+  else if (selectedCount === 1)
+    content = (
+      <>
+        Drag to move · double-click to reshape · <kbd>Shift</kbd>+click or drag a box to
+        multi-select
+      </>
+    );
+  else
+    content = (
+      <>
+        Drag a box to select several regions · <kbd>{MOD}</kbd>
+        <kbd>C</kbd>/<kbd>{MOD}</kbd>
+        <kbd>V</kbd> to copy and paste
       </>
     );
 

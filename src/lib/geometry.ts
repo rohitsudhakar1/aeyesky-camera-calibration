@@ -59,6 +59,20 @@ export const translatePolygon = (points: Point[], dx: number, dy: number): Point
   return points.map((p) => ({ x: p.x + clampedDx, y: p.y + clampedDy }));
 };
 
+/**
+ * Clamps a drag delta against the union of several polygons, so a multi-region
+ * selection moves as one rigid body and stops when any edge of the group meets
+ * the image boundary — rather than each polygon clamping independently, which
+ * would deform the arrangement.
+ */
+export const clampGroupDelta = (polygons: Point[][], dx: number, dy: number) => {
+  const box = boundingBox(polygons.flat());
+  return {
+    dx: Math.min(1 - (box.x + box.width), Math.max(-box.x, dx)),
+    dy: Math.min(1 - (box.y + box.height), Math.max(-box.y, dy)),
+  };
+};
+
 /** Short, human-quotable id in the style of the design (e.g. "23wpfu238"). */
 export const generateId = (): string => {
   const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';

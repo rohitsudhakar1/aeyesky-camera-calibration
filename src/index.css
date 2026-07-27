@@ -333,6 +333,47 @@ input {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+/* Bulk selection bar */
+
+.selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.selection-bar span {
+  flex: 1;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.selection-bar button {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.selection-bar button:hover {
+  color: var(--text);
+}
+
+.selection-bar__delete,
+.selection-bar__delete:hover {
+  color: var(--danger);
+}
+
+.chip--button {
+  cursor: pointer;
+  border: none;
+  font: inherit;
+}
+
 /* Layer list */
 
 .layer-group {

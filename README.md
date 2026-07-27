@@ -34,13 +34,17 @@ npm run typecheck  # tsc --noEmit
 | Undo an anchor | `Backspace` while drawing |
 | Cancel a drawing | `Esc` |
 | Select a region | Select tool (`V`), click the region — or click its row in **LABELLED AREA** |
-| Move a region | Drag it with the select tool |
+| Select several | `Shift`/`Cmd`+click to add, drag a box on empty canvas to marquee-select, `Cmd`/`Ctrl`+`A` for all |
+| Select a whole label | Click the label chip in a **LABELLED AREA** group header |
+| Move a region | Drag it with the select tool — a multi-selection moves together |
+| Copy / paste | `Cmd`/`Ctrl`+`C`, then `Cmd`/`Ctrl`+`V` (each paste is offset so copies don't hide) |
+| Duplicate in place | `Cmd`/`Ctrl`+`D` |
 | Reshape a region | Double-click it to enter anchor-edit mode, then drag anchors |
 | Add an anchor | Click a dashed edge midpoint in anchor-edit mode |
 | Remove an anchor | `Alt`+click an anchor (minimum 3) |
 | Change a region's label | Click the id badge above a selected region |
 | Hide / show | Eye icon on a row, or on a group header for all of that label |
-| Delete | Trash icon (confirmation dialog), or `Delete` with a region selected |
+| Delete | Trash icon (confirmation dialog), or `Delete` with regions selected — a multi-selection is removed in one confirmation, and a bar above the list shows the count with **Clear** / **Delete** |
 | Save | **Save Calibration** — downloads the JSON and writes to `localStorage` |
 
 ## Coordinate format
@@ -129,10 +133,18 @@ selection, edit mode, pending deletion — lives in one Zustand store, so the
 canvas and the layer panel are two views of the same state and selection sync
 between them is automatic rather than plumbed through props.
 
-**Interaction state is explicit.** `draft` (mid-drawing), `selectedId`
+**Interaction state is explicit.** `draft` (mid-drawing), `selectedIds`
 (bounding box + badge) and `editingId` (draggable anchors) are separate fields
 rather than one overloaded mode enum, which is what makes the design's three
-distinct polygon appearances fall out directly.
+distinct polygon appearances fall out directly. Selection is a list rather than
+a single id so regions can be copied, moved and deleted in bulk; anchor editing
+stays deliberately single-region, and entering it narrows the selection.
+
+**Clipboard is in-app first.** Copy mirrors regions to the OS clipboard as JSON
+so they survive across tabs and sessions, but paste reads the in-app clipboard
+whenever it has contents. Reading the system clipboard can block on a permission
+prompt or never settle when the page isn't focused, which would make paste feel
+broken — the OS clipboard is only consulted when nothing was copied in this tab.
 
 **Labels are configuration.** `src/config.ts` holds the label catalogue with its
 colours and required counts; adding a category is a one-line change with no
@@ -159,12 +171,13 @@ src/
   components/
     CanvasStage.tsx   drawing, selection, anchor editing, rendering
     LabelPanel.tsx    LABEL section — category picker + completion counts
-    LayerPanel.tsx    LABELLED AREA section — grouped list, search, visibility
+    LayerPanel.tsx    LABELLED AREA section — grouped list, search, multi-select, visibility
     ConfirmDialog.tsx delete confirmation
     Toolbar.tsx       select / polygon tools
     icons.tsx
   lib/
-    geometry.ts       point-in-polygon, bbox, midpoints, id generation
+    geometry.ts       point-in-polygon, bbox, midpoints, group clamping, id generation
+    clipboard.ts      region copy/paste envelope + OS clipboard interop
     persistence.ts    calibration file build / download / localStorage
   store.ts            single Zustand store
   config.ts           label catalogue, camera id, image metadata
@@ -217,6 +230,16 @@ Things the design left open, and the calls I made:
 - **No self-intersection or overlap validation.**
 - **Bounding-box handles are decorative** — they render the selected state from
   the design but do not scale the polygon. Reshaping is done via anchor editing.
+- **Marquee selection uses bounding-box intersection**, so it catches any region
+  the box touches rather than only fully-enclosed ones. That matches the
+  expectation set by most design tools, but it does mean a large concave region
+  can be caught by a box that never visually overlaps its filled area.
+- **Relabelling works one region at a time.** The id badge is the entry point for
+  switching category, and it is only shown on a single selection because badges
+  would stack illegibly otherwise.
+- **Copy/paste and multi-select are keyboard-driven.** There is no context menu;
+  discoverability rests on the hint bar under the canvas and the selection bar
+  in the layer panel.
 - **Search matches ids and label names only**, not any free-text field, since
   regions have no name field in the design.
 - **Touch is untested.** Pointer events are used throughout so it should

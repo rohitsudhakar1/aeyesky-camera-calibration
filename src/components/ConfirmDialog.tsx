@@ -24,10 +24,15 @@ export function ConfirmDialog() {
   if (!pending) return null;
 
   let message: string;
-  if (pending.kind === 'area') {
-    const area = areas.find((a) => a.id === pending.id);
-    if (!area) return null;
-    message = `Are you sure you want to delete ${getLabel(area.label).displayName} ${area.id} now?`;
+  if (pending.kind === 'areas') {
+    const targets = areas.filter((a) => pending.ids.includes(a.id));
+    if (!targets.length) return null;
+    message =
+      targets.length === 1
+        ? `Are you sure you want to delete ${getLabel(targets[0].label).displayName} ${
+            targets[0].id
+          } now?`
+        : `Are you sure you want to delete these ${targets.length} labelled areas now?`;
   } else {
     const label = getLabel(pending.label);
     const count = areasByLabel(areas, pending.label).length;

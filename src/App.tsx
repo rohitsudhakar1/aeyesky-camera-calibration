@@ -5,6 +5,7 @@ import { LabelPanel } from './components/LabelPanel';
 import { LayerPanel } from './components/LayerPanel';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { useStore, MIN_VERTICES } from './store';
+import { readFromSystemClipboard, writeToSystemClipboard } from './lib/clipboard';
 import { CAMERA_ID, LABELS } from './config';
 import {
   buildCalibration,
@@ -24,7 +25,7 @@ export default function App() {
     if (file) useStore.setState({ areas: toAreas(file), lastSavedAt: file.savedAt });
   }, []);
 
-  useKeyboardShortcuts();
+  useKeyboardShortcuts(setToast);
 
   useEffect(() => {
     if (!toast) return;
@@ -90,7 +91,9 @@ function SaveFooter({ onSave }: { onSave: () => void }) {
   );
 }
 
-function useKeyboardShortcuts() {
+const plural = (n: number) => `${n} ${n === 1 ? 'region' : 'regions'}`;
+
+function useKeyboardShortcuts(setToast: (message: string) => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -100,11 +103,55 @@ function useKeyboardShortcuts() {
       // The confirmation dialog owns the keyboard while it is open.
       if (s.pendingDelete) return;
 
+      if (e.metaKey || e.ctrlKey) {
+        switch (e.key.toLowerCase()) {
+          case 'c': {
+            const regions = s.copySelected();
+            if (!regions) return; // nothing selected — leave the native copy alone
+            e.preventDefault();
+            void writeToSystemClipboard(regions);
+            setToast(`${plural(regions.length)} copied`);
+            return;
+          }
+          case 'v': {
+            e.preventDefault();
+            // In-app clipboard first: it is synchronous and always available.
+            // Reading the OS clipboard can block on a permission prompt or
+            // never settle when the page isn't focused, so it is only consulted
+            // when nothing has been copied in this tab (the cross-tab case).
+            if (s.clipboard) {
+              const ids = s.paste();
+              setToast(ids.length ? `${plural(ids.length)} pasted` : 'Nothing to paste');
+              return;
+            }
+            void readFromSystemClipboard().then((external) => {
+              const ids = external ? useStore.getState().paste(external) : [];
+              setToast(ids.length ? `${plural(ids.length)} pasted` : 'Nothing to paste');
+            });
+            return;
+          }
+          case 'd': {
+            if (!s.selectedIds.length) return;
+            e.preventDefault();
+            const ids = s.duplicateSelected();
+            if (ids.length) setToast(`${plural(ids.length)} duplicated`);
+            return;
+          }
+          case 'a': {
+            e.preventDefault();
+            s.setTool('select');
+            s.selectMany(s.areas.filter((a) => a.visible).map((a) => a.id));
+            return;
+          }
+        }
+        return;
+      }
+
       switch (e.key) {
         case 'Escape':
           if (s.draft.length) s.cancelDraft();
           else if (s.editingId) s.setEditing(null);
-          else s.select(null);
+          else s.clearSelection();
           break;
         case 'Enter':
           if (s.draft.length >= MIN_VERTICES) s.commitDraft();
@@ -112,7 +159,7 @@ function useKeyboardShortcuts() {
         case 'Backspace':
         case 'Delete':
           if (s.draft.length) s.undoDraftPoint();
-          else if (s.selectedId) s.requestDelete({ kind: 'area', id: s.selectedId });
+          else if (s.selectedIds.length) s.requestDelete({ kind: 'areas', ids: s.selectedIds });
           break;
         case 'v':
         case 'V':
@@ -126,5 +173,5 @@ function useKeyboardShortcuts() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [setToast]);
 }
