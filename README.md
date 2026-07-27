@@ -238,10 +238,11 @@ understand and can walk through.
 
 **How I used it**
 
-- **Design extraction** — the Figma MCP server needed an OAuth round-trip, so I
-  had it read the four exported frames directly and enumerate every interaction
-  state the two annotation sheets specify (anchor-point states, line colours,
-  selection vs. edit mode, layer-panel hover/delete/visibility behaviour).
+- **Design extraction** — I exported the four frames from Figma and had it read
+  them and enumerate every interaction state the two annotation sheets specify
+  (anchor-point states, line colours, selection vs. edit mode, layer-panel
+  hover/delete/visibility behaviour), so implementation ran against a checklist
+  rather than my memory of the mock.
 - **Implementation** — scaffolding, the SVG canvas component, the panels, the
   CSS, to the architecture I'd set.
 - **Verification** — driving the running app through Chrome DevTools to exercise
@@ -250,17 +251,34 @@ understand and can walk through.
 
 **Representative prompts**
 
-- "Read these four exported Figma frames and list every interaction state the
-  notes specify."
-- "Build the calibration screen: React + TS + Vite, SVG overlay on the table
-  image, Zustand store, polygon and select tools."
-- "Implement the draft-polygon states from the notes: hollow anchors, filled last
-  anchor, light-blue rubber-band line, blue committed segments, close by clicking
-  the first point."
-- "Selection should be a list, not a single id — I want multi-select and bulk
-  delete in one confirmation."
-- "Drive the app in Chrome and verify drawing, edit mode, vertex insertion,
-  delete confirmation and the saved JSON."
+- *Scoping, before any code:* "Here are the four frames I exported from Figma.
+  Don't write anything yet — enumerate every interaction state the two annotation
+  sheets specify, including the ones that are easy to miss, so we build against a
+  checklist instead of my memory of the mock."
+- *Setting the data model:* "Store polygon vertices normalised to the image
+  (`0–1`), not in screen pixels. A calibration describes a camera view, not one
+  particular JPEG — it has to survive the feed being delivered at a different
+  resolution. Embed the image dimensions and a `coordinateSystem` block in the
+  export so the file is self-describing."
+- *Overruling an implementation choice:* "Don't render the SVG with a normalised
+  `viewBox` — it scales stroke widths and handle radii along with the image, so
+  anchors become sub-pixel dots on a large display and the grab threshold means a
+  different physical distance at every window size. Measure the stage with a
+  `ResizeObserver` and convert to screen pixels in JS."
+- *Shaping the state model:* "Keep `draft`, `selectedIds` and `editingId` as
+  separate fields rather than one overloaded mode enum. The design specifies
+  three distinct polygon appearances — I want those to fall out of state, not out
+  of branching in the render."
+- *Extending it:* "Selection needs to be a list, not a single id: marquee and
+  shift-click multi-select, drag the group as one rigid body clamped to the image
+  bounds, and bulk delete behind a single confirmation."
+- *Debugging, not patching:* "`Cmd+V` silently does nothing. Find the actual
+  cause before changing any code — I don't want a `try/catch` over a symptom."
+- *Verification:* "Drive the running app in Chrome: draw a polygon, enter
+  anchor-edit mode, drag a vertex, insert one at an edge midpoint, then assert
+  that the exported JSON matches the on-screen geometry."
+- *Holding scope:* "Would adding X help, or is it drifting from the brief? Give
+  me the argument against it first."
 
 **Where I changed, corrected or rejected a suggestion**
 
