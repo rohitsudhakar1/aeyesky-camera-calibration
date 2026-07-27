@@ -1,0 +1,215 @@
+{
+    "version": 1,
+    "cameraId": "DSH-4532",
+    "savedAt": "2026-07-27T20:30:24.632Z",
+    "image": {
+        "source": "/table.jpg",
+        "width": 1293,
+        "height": 893
+    },
+    "coordinateSystem": {
+        "space": "normalized",
+        "origin": "top-left",
+        "xAxis": "left-to-right",
+        "yAxis": "top-to-bottom",
+        "range": [
+            0,
+            1
+        ],
+        "note": "Polygon vertices are fractions of the source image. Multiply x by image.width and y by image.height for pixels. Vertices are in draw order and the ring is implicitly closed (last connects to first)."
+    },
+    "areas": [
+        {
+            "id": "gbj560ono",
+            "label": "main_bet",
+            "polygon": [
+                [
+                    0.128,
+                    0.36
+                ],
+                [
+                    0.21,
+                    0.36
+                ],
+                [
+                    0.21,
+                    0.45
+                ],
+                [
+                    0.128,
+                    0.45
+                ]
+            ],
+            "visible": true,
+            "createdAt": "2026-07-27T20:29:28.769Z"
+        },
+        {
+            "id": "zmgcdgzdc",
+            "label": "main_bet",
+            "polygon": [
+                [
+                    0.23099,
+                    0.47746
+                ],
+                [
+                    0.31699,
+                    0.47746
+                ],
+                [
+                    0.31699,
+                    0.56546
+                ],
+                [
+                    0.23099,
+                    0.56546
+                ]
+            ],
+            "visible": true,
+            "createdAt": "2026-07-27T20:29:29.078Z"
+        },
+        {
+            "id": "rboc6al2n",
+            "label": "main_bet",
+            "polygon": [
+                [
+                    0.352,
+                    0.523
+                ],
+                [
+                    0.432,
+                    0.523
+                ],
+                [
+                    0.432,
+                    0.615
+                ],
+                [
+                    0.352,
+                    0.615
+                ]
+            ],
+            "visible": true,
+            "createdAt": "2026-07-27T20:29:29.388Z"
+        },
+        {
+            "id": "gycmnwcib",
+            "label": "main_bet",
+            "polygon": [
+                [
+                    0.47,
+                    0.545
+                ],
+                [
+                    0.552,
+                    0.545
+                ],
+                [
+                    0.552,
+                    0.637
+                ],
+                [
+                    0.47,
+                    0.637
+                ]
+            ],
+            "visible": true,
+            "createdAt": "2026-07-27T20:29:29.698Z"
+        },
+        {
+            "id": "4x2d5sau0",
+            "label": "main_bet",
+            "polygon": [
+                [
+                    0.588,
+                    0.525
+                ],
+                [
+                    0.668,
+                    0.525
+                ],
+                [
+                    0.668,
+                    0.617
+                ],
+                [
+                    0.588,
+                    0.617
+                ]
+            ],
+            "visible": true,
+            "createdAt": "2026-07-27T20:29:30.007Z"
+        },
+        {
+            "id": "8v8i9x23o",
+            "label": "main_bet",
+            "polygon": [
+                [
+                    0.7,
+                    0.455
+                ],
+                [
+                    0.782,
+                    0.455
+                ],
+                [
+                    0.782,
+                    0.545
+                ],
+                [
+                    0.7,
+                    0.545
+                ]
+            ],
+            "visible": true,
+            "createdAt": "2026-07-27T20:29:30.315Z"
+        },
+        {
+            "id": "484v39r2b",
+            "label": "main_bet",
+            "polygon": [
+                [
+                    0.826,
+                    0.352
+                ],
+                [
+                    0.91,
+                    0.352
+                ],
+                [
+                    0.91,
+                    0.442
+                ],
+                [
+                    0.826,
+                    0.442
+                ]
+            ],
+            "visible": true,
+            "createdAt": "2026-07-27T20:29:30.624Z"
+        },
+        {
+            "id": "z55gqylca",
+            "label": "chip_tray",
+            "polygon": [
+                [
+                    0.317,
+                    0.09
+                ],
+                [
+                    0.688,
+                    0.09
+                ],
+                [
+                    0.703,
+                    0.288
+                ],
+                [
+                    0.302,
+                    0.288
+                ]
+            ],
+            "visible": true,
+            "createdAt": "2026-07-27T20:29:30.983Z"
+        }
+    ]
+}
